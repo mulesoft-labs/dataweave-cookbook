@@ -1,0 +1,76 @@
+= Array
+
+*Type* => ':array'
+
+An array represents a list of values.
+Literal arrays are represented by a sequence of expressions separated by "," enclosed in "[" "]"
+
+[source,ruby]
+---------------------------------------------------------------------
+#Array Of Strings
+["Foo","Bar"]
+---------------------------------------------------------------------
+
+== Dynamic arrays
+
+Dynamic arrays allows to include an element based on a condition.
+
+[source,ruby]
+---------------------------------------------------------------------
+["Foo",("Next") when payload.hasNext]
+---------------------------------------------------------------------
+
+In the above example, "Next" will only be added to the list if the value of "hasNext" in the incoming payload is "true".
+
+== Selectors
+
+=== Index selector
+
+Selects the element at a given position using "[]".
+
+. If the index is greater than or equal to 0, it will start counting from the beginning.
+. If the index is negative, it will start counting from the end.
+
+[source, ruby]
+------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  first: [0,1,2,3,4][0],
+  last: [0,1,2,3,4][-1],
+  penultimate: [0,1,2,3,4][-2]
+}
+------------------------------------------------------------
+[source,json]
+-----------------------------------------------------------
+{
+  "first": 0,
+  "last": 4,
+  "penultimate": 3
+}
+-----------------------------------------------------------
+
+=== Range selector
+
+Selects the elements specified by the range in that specific order. This selector allows to slice an array or invert it.
+
+[source,ruby]
+------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  slice: [0,1,2][0..2],
+  reverted: [0,1,2][-1..0]
+}
+------------------------------------------------------------
+
+
+[source,json]
+-----------------------------------------------------------
+{
+  "slice": [0,1],
+  "reverted": [2,1,0]
+}
+-----------------------------------------------------------

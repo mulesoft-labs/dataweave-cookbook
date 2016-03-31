@@ -1,0 +1,129 @@
+= Variables
+
+== Input Variables
+
+Input directives allow you to make any number of input sources available in global variables, which can then be referenced in any part of the Transform's body. To reference one of these, you can just call it by the name you defined in the directive.
+Remember that the Transform is itself an expression, so the entire body of the transform could be written as a simple variable reference to the input document.
+Consider the example below, which transforms an incoming JSON document into XML, and where the output XML structure mimics the input JSON structure.
+
+.Input
+[source, json]
+----
+{
+  "document" : {
+    "language" : "English",
+    "text" : "Hello world"
+  }
+}
+----
+
+.Transform
+[source,ruby]
+----
+%dw 1.0
+%input in0
+%output application/xml
+---
+payload
+----
+
+.Output
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<document>
+  <language>English</language>
+  <text>Hello world</text>
+</document>
+----
+
+== Constants
+
+In the DataWeave header, you define constants as directives, these can then be referenced as variables in any part of your transform body, just as you do with input variables.
+The following creates an XML document and inserts the constant value for Language "Español" in the output language element.
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/xml
+%var language='Español'
+---
+{
+  document: {
+    language: language,
+    text: "Hola mundo"
+  }
+}
+----
+
+.Output
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<document>
+  <language>Español</language>
+  <text>Hola Mundo</text>
+</document>
+----
+
+== Scoped Variables
+
+Variables declared in the Transform's header always have a global scope, to declare and initialize a variable with a limited scope, you can do so in any part of the transform's body.
+
+You can initialize these variables using literal expressions, variable reference expressions or functional expressions. They may make reference to any other scoped variables or any of the input variables or constants in their initialization. The declaration and initialization can be prepended to any literal expression, but you must be aware that the literal they are prepended to delimits their scope. You cannot reference a variable outside its scope.
+
+To declare a variable in the DataWeave body, the following syntax is supported: *using (<variable-name> = <expression>)* and it must be written before defining the contents of the literal that it will exist in.
+To reference an already initialized variable, you can just call it by the name you defined for it as with any other variable, or you can also write it in the form *$<variable-name>*. Consider the following examples:
+
+*Scoped to Simple literal*
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+using (x = 2) 3 + x # <1>
+----
+<1> Result is simply 5
+
+*Scoped to Array literal*
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+using (x = 2) [1, x, 3]
+----
+
+*Scoped to Object literal*
+[source, ruby]
+----
+%dw 1.0
+%output application/xml
+---
+{
+  person: using (user = "Greg", gender = "male") { # <1>
+    name: user, # <2>
+    gender: gender
+  }
+}
+----
+<1> Declaration and initialization.
+<2> *user* is a valid reference because it is within the object *person* for which it was declared.
+
+*Invalid Reference outside of Scope*
+[source, ruby]
+----
+%dw 1.0
+%output application/xml
+---
+entry: using (firstName = "Annie", lastName = "Point") {
+  person: using (user = firstName, gender = "male") {
+    name: user,
+    gender: gender
+  },
+  sn: lastName, # <1>
+  gen: gender # <2>
+}
+----
+<1> The reference *lastName* is valid because it is within scope.
+<2> The reference *$gender* is invalid because gender was declared in the *person* object, and this reference exists outside the scope of that object.

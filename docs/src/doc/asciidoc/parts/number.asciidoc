@@ -1,0 +1,6 @@
+= Number
+
+*Type* => ':number'
+
+There is only one number type that supports both floating point and integer numbers.
+There is no loss of precision in any operation, the engine always stores the data in the most performant way that doesn't compromise precision.

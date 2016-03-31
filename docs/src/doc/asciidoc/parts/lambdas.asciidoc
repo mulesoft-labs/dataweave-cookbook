@@ -1,0 +1,156 @@
+= Functions and Lambdas
+
+There are two types of directives you can use to define a function, through %var (as with variables) using a lambda, or through %function.
+
+
+== Lambdas
+
+Lambdas can be used inside operators such as map, mapObject, etc or they can be assign to a variable.
+When using them with an operator it can be either named or anonymous.
+
+=== Assign to a var
+
+.Transport
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+%var toUser = (user) -> {firstName: user.givenName, lastName: user.sn}
+---
+{
+  "user" : toUser({ givenName : "Annie", sn : "Point" })
+}
+----
+
+.Output
+[source, json]
+----
+{
+  "user": {
+    "firstName": "Annie",
+    "lastName": "Point"
+  }
+}
+----
+
+=== Named with an operator
+.Input
+
+[source, ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+users: ["jhon", "petter", "mat"] map ((name) ->  upper name)
+---------------------------------------------------------------------
+
+.Transform
+[source,json]
+---------------------------------------------------------------------
+{
+  "users": ["JHON","PETTER","MAT"]
+}
+---------------------------------------------------------------------
+
+=== Anonymous with an operator
+
+.Transform
+[source, ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+users: ["jhon", "petter", "mat"] map  upper $
+---------------------------------------------------------------------
+
+.Output
+[source,json]
+---------------------------------------------------------------------
+{
+  "users": ["JHON","PETTER","MAT"]
+}
+---------------------------------------------------------------------
+
+
+== Functions
+
+You can declare functions in the Header and these can be invoked at any point in the Body. You refer to them as you do to any variable or constant: using the form *$<function-name>()* passing an expression as argument. The result of the expression that is passed as an argument is used in the execution of the function body.
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+%function toUser(user){firstName: user.givenName, lastName: user.sn}
+---
+{
+  "user" : toUser({ givenName : "Annie", sn : "Point" })
+}
+----
+
+.Output
+[source, json]
+----
+{
+  "user": {
+    "firstName": "Annie",
+    "lastName": "Point"
+  }
+}
+----
+
+== Existing Functions
+
+=== Expressions that Call External Flows
+
+From a DataWeave transform, you can trigger the calling of a different flow in your Mule application, and whatever the flow returns will be what the expression returns.
+
+You can do this through the following expression:
+
+`lookup(“flowName”,$)`
+
+Which takes two parmeters:
+
+* The name of the flow that must be called
+* The payload to send to this flow, as a map
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+{
+  a: lookup("mySecondFlow",{b:"Hello"})
+}
+----
+
+.Mule Flow
+[source, XML]
+----
+<flow name="mySecondFlow">
+    <set-payload doc:name="Set Payload" value="#[payload + ' world!' ]"/>
+</flow>
+----
+
+.Output
+[source, JSON]
+----
+{
+  "a": "Hello world!"
+}
+----
+
+=== Accessing Properties
+
+You can reference any *Property* (System or Spring) that exists in the server while DataWeave is processing your transformation, to do so use the *p('prop_name')* function.
+
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+{
+  a: p('userName')
+}
+---------------------------------------------------------------------

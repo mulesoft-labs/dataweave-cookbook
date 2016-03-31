@@ -1,0 +1,18 @@
+= Weave Documentation
+:author: MuleSoft Inc.
+:toc: left
+:icons: font
+:numbered:
+:website: http://mulesoft.org/
+
+:leveloffset: 1
+
+include::object.asciidoc[]
+
+include::array.asciidoc[]
+
+include::string.asciidoc[]
+
+include::xml.asciidoc[]
+
+:leveloffset: 0

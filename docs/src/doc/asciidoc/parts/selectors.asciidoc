@@ -1,0 +1,748 @@
+= Selectors
+
+== Value Selector Expressions
+
+The complex structure of Objects and Arrays can be navigated using Selector Expressions. Each selector expression returns either an object, an array or a simple type.
+A selector always operates within a given context, which can be a reference to a variable, an object literal, an array literal or the invocation of a function. As DataWeave processes a selector, a new context is set for further selectors, and so you can navigate through the complex structures of arrays and objects by using chains of selectors, who's depth is limited only by the depth of the current context.
+There are 3 types of selector expression:
+
+* *Single Value selector* .<key-name>
+* *Multi Value selector* .*<key-name>
+* *Descendants Selector* ..<key-name>
+* *Indexed Selector* [<index>]
+
+Applying the *Single level Explicit Selector*, the *Descendants Selector* or the *Indexed Selector* returns the value of the key:value pair that matches the expression.
+
+
+Each of these selector expressions supports having a '?' appended at the end of the chain. This changes the expression into a query that checks upon the existence of the key. The return type in this case is a boolean true or false.
+
+=== Single Value selector
+
+This selector returns the first value whose key matches the expression, i.e *payload.name* returns the value whose key matches *name*.
+
+.Input
+[source, json]
+----
+{
+  "people": {
+    "size" : 1,
+    "person": {
+      "name": "Nial",
+      "address": {
+        "street": {
+          "name": "Italia",
+          "number": 2164
+        },
+        "area": {
+          "zone": "San Isidro",
+          "name": "Martinez"
+        }
+      }
+    }
+  }
+}
+----
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/xml
+---
+{
+  address: payload.people.person.address
+}
+----
+
+.Output
+[source, xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<address>
+  <street>
+    <name>Italia</name>
+    <number>2164</number>
+  </street>
+  <area>
+    <zone>San Isidro</zone>
+    <name>Martinez</name>
+  </area>
+</address>
+----
+
+=== Multi Value selector
+
+This selector returns an array with all the values whose key matches the expression.
+
+.Input
+[source, json]
+----
+<users>
+  <user>Mariano</user>
+  <user>Martin</user>
+  <user>Leandro</user>
+</users>
+----
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+{
+  users: payload.users.*user
+}
+----
+
+.Output
+[source, json]
+----
+{
+  "users": [
+    "Mariano",
+    "Martin",
+    "Leandro"
+  ]
+}
+----
+=== Indexed Selector
+
+This selector can be applied to String literals, Arrays and Objects. In the case of Objects, the value of the key:value pair found at the index is returned.
+The index is zero based.
+
+. If the index is bigger or equal to 0, it starts counting from the beginning.
+. If the index is negative, it starts counting from the end where -1 is the last element.
+
+.Input
+[source, json]
+----
+{
+  "people": [
+        {
+          "name": "Nial",
+          "address": "Martinez"
+        },
+        {
+          "name": "Coty",
+          "address": "Belgrano"
+        }
+    ]
+}
+----
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+payload.people[1]
+----
+
+.Output
+[source, JSON]
+----
+{
+  name: Coty,
+  address: Belgrano
+}
+----
+
+When using the Index Selector with a String, the string is broken down into an array, where each character is an index.
+
+.Transform
+[source, ruby]
+--------------------------------------------------------
+%output application/json
+---
+{
+  name: "MuleSoft"[0]
+}
+--------------------------------------------------------
+
+.Output
+[source,json]
+--------------------------------------------------------
+{
+  "name": "M"
+}
+--------------------------------------------------------
+
+
+
+=== Range selector
+
+Range selectors limit the output to only the elements specified by the range on that specific order. This selector allows you to slice an array or even invert it.
+
+.Transform
+[source, ruby]
+------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  slice: [0,1,2][0..1],
+  last: [0,1,2][-1..0]
+}
+------------------------------------------------------------
+
+.Output
+[source,json]
+-----------------------------------------------------------
+{
+  "slice": [
+    0,
+    1
+  ],
+  "last": [
+    2,
+    1,
+    0
+  ]
+}
+-----------------------------------------------------------
+
+
+== Attribute Selector Expressions
+
+In order to query for the attributes on an Object, the syntax *.@<key-name>* is used. If you just use *.@* (with no <key-name>) it returns an object containing each key:value pair in it.
+
+.Input
+[source, xml]
+----
+<product id="1" type="tv">
+  <brand>Samsung</brand>
+</product>
+----
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+{
+  item: {
+    type : payload.product.@type,
+    name : payload.product.brand,
+    attributes: payload.product.@
+  }
+}
+----
+
+.Output
+[source, JSON]
+----
+{
+  item: {
+    type: tv,
+    name: Samsung,
+    attributes: { # <1>
+      id: 1,
+      type: tv
+    }
+  }
+}
+----
+
+<1> The third element in this output retrieves an object with all of the attributes in it, in this case both the id and the type.
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+{
+  item: {
+    attributes : payload.product.@,
+    name : payload.product.brand
+  }
+}
+----
+
+.Output
+[source, JSON]
+----
+{
+  item: {
+    attributes: {
+      id: 1,
+      type: tv
+    },
+    name: Samsung
+  }
+}
+----
+=== Applying Selectors to Arrays
+
+When the context for selection is an Array, the result is always an Array. Each element on the context Array is queried for matching key:value pairs.
+In each case, only the *value* of the key:value pair is returned.
+
+.Input
+[source, ruby]
+----
+{
+  "people": [ # <1>
+    {
+      "person": {
+        "name": "Nial",
+        "address": {
+          "street": {
+            "name": "Italia",
+            "number": 2164
+          },
+          "area": {
+            "zone": "San Isidro",
+            "name": "Martinez"
+          }
+        }
+      }
+    },
+    {
+      "person": {
+        "name": "Coty",
+        "address": {
+          "street": {
+            "name": "Monroe",
+            "number": 323
+          },
+          "area": {
+            "zone": "BA",
+            "name": "Belgrano"
+          }
+        }
+      }
+    }
+  ]
+}
+----
+<1> As 'people' is an array, this sets the context for searching across both 'person' instances. The result from this is always an array.
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+payload.people.person.address.street
+----
+
+.Output
+[source, JSON]
+----
+[ # <1>
+  {
+    name: Italia,
+    number: 2164
+  },
+  {
+    name: Monroe,
+    number: 323
+  }
+]
+----
+<1> As the context is an array, the output is always an array. An array is returned even if there's a single matching value.
+
+
+==== Selecting the key value pair
+
+As selectors only return the value of a key:value pair, in order to get both the key and value, you can use a type conversion to object.
+
+.Input
+
+[source, json]
+----
+{
+  "name": "Mariano",
+  "lastName" : "Doe"
+}
+----
+
+.Transform
+
+[source, ruby]
+----
+%dw 1.0
+%output application/xml
+---
+user: payload.name as :object <1>
+----
+
+.Output
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<user>
+  <name>Mariano</name>
+</user>
+----
+
+<1> Using the *as :object* transforms the value into an object that contains the key as well as the value. Without this conversion to object, the returned XML body would simply be <user>Mariano</user>.
+
+=== Descendants Selector
+
+This selector is applied to the context using the form *..<field-name>* and retrieves the values of all matching key:value pairs in the sub-tree under the current context. Regardless of the hierarchical structure these fields are organized in, they are all placed at the same level in the output.
+
+.Input
+[source, json]
+----
+{
+  "people": {
+    "person": {
+      "name": "Nial",
+      "address": {
+        "street": {
+          "name": "Italia",
+          "number": 2164
+        },
+        "area": {
+          "zone": "San Isidro",
+          "name": "Martinez"
+        }
+      }
+    }
+  }
+}
+----
+
+.Transform
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+{
+  names: payload.people..name <1>
+}
+----
+
+.Output
+[source, json]
+----
+{
+  "names": [
+    "Nial",
+    "Italia",
+    "Martinez"
+  ]
+}
+----
+
+<1> In this example, all of the fields that match the key "name" are placed in a list called "names", regardless of their cardinality in the tree of the input data.
+
+==== Selecting all the descendant key value pairs
+
+.Input
+[source, json]
+----
+{
+  "people": {
+    "person": {
+      "name": "Nial",
+      "address": {
+        "street": {
+          "name": "Italia",
+          "number": 2164
+        },
+        "area": {
+          "zone": "San Isidro",
+          "name": "Martinez"
+        }
+      }
+    }
+  }
+}
+----
+
+.Transform
+
+[source, ruby]
+----
+%dw 1.0
+%output application/xml
+---
+{
+  names: payload.people..name as :object<1>
+}
+----
+
+.Output
+
+[source, xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<names>
+  <name>Nial</name>
+  <name>Italia</name>
+  <name>Martinez</name>
+</names>
+----
+
+<1> The *as: object* makes the expression return an object rather than an array (which would be returned by default). This implies that each value has a key. Without this conversion, in XML the returned array would be a single long string of characters comprised of all three names merged into one.
+
+== Selectors modifiers
+
+There are two selectors modifiers: ? and !.
+The first returns true or false whether the keys are present on the structures.
+The second one evaluates the selection and fails if any key is not present.
+
+== Key Present
+
+Returns true if the specified key is present in the object.
+
+.Input:
+
+[source,json]
+--------------------------------------------------------
+{
+  "name": "Annie"
+}
+--------------------------------------------------------
+
+.Transform:
+
+[source,ruby]
+--------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+present: payload.name?
+--------------------------------------------------------
+
+.Output:
+
+[source,xml]
+--------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<present>true</present>
+--------------------------------------------------------
+
+In the example above, as a 'name' key does exist in the input, it returns *true*
+
+This operation also works with attributes:
+
+.Input:
+[source, xml]
+----
+<product id="1" type="tv">
+  <brand>Samsung</brand>
+</product>
+----
+
+.Transform:
+[source, ruby]
+----
+%dw 1.0
+%output application/json
+---
+{
+  item: {
+    typePresent : payload.product.@type?
+  }
+}
+----
+
+.Output:
+[source, json]
+----
+{
+  item: {
+    typePresent: true
+  }
+}
+----
+
+You can also use this validation operation as part of a filter:
+
+.Input
+[source,xml]
+--------------------------------------------------------
+<users>
+  <name>Mariano</name>
+  <name>Luis</name>
+  <name>Mariano</name>
+</users>
+--------------------------------------------------------
+
+.Transform
+[source,ruby]
+--------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+users: payload.users.name[?($ == "Mariano")]
+--------------------------------------------------------
+
+.Output
+[source,xml]
+--------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<users>
+  <name>Mariano</name>
+  <name>Mariano</name>
+</users>
+--------------------------------------------------------
+
+The example above selects key value pairs with value "Mariano" => {name: Mariano, name: Mariano}
+
+== Assert Present
+
+Returns an exception if any of the specified keys is not found.
+
+.Input:
+
+[source,json]
+--------------------------------------------------------
+{
+  "name": "Annie"
+}
+--------------------------------------------------------
+
+.Transform:
+
+[source,ruby]
+--------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+present: payload.lastName!<1>
+--------------------------------------------------------
+
+<1> Throws an exception saying "There is no key named 'lastName'"
+
+
+== Reference Elements From an Incoming Mule Message
+
+Often, you'll want to use the different elements from the Mule Message that arrives to the DataWeave Transformer in your transform. The following sections show you how to reference each of these:
+
+=== The Payload of a Mule Message
+
+You can take the *Payload* of the mule message that reaches the DataWeave transformer and use it in your transform body.
+
+[source, ruby]
+----
+%dw 1.0
+%output application/xml
+---
+{
+  a: payload
+}
+----
+
+You can also refer to sub elements of the payload through the dot syntax `payload.user`.
+
+[TIP]
+If the metadata for the payload's inner contents are known to Studio, an autocomplete function will help you out.
+
+You can optionally also define the payload as an input directive in the header, although this isn't required.
+
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%input payload application/xml
+%output application/xml
+---
+{
+  a: payload
+}
+---------------------------------------------------------------------
+
+=== Inbound Properties from a Mule Message
+
+You can take *Inbound Properties* from the mule message that arrives to the DataWeave transformer and use them in your transform body. To refer to one of these, simply call it through the matching http://www.mulesoft.org/documentation/display/current/Mule+Expression+Language+MEL[MEL] expression.
+
+In MEL, there are two supported syntaxes to call an inbound property:
+
+* `inboundProperties.name`
+* `inboundProperties[’name’]`
+
+[IMPORTANT]
+The first method only works if the variable name doesn't include any periods or spaces.
+
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+{
+  a: inboundProperties.userName
+}
+---------------------------------------------------------------------
+
+[TIP]
+If the metadata about these inbound properties is known to Studio, an autocomplete function will help you out.
+
+You can optionally also define the inbound property as a variable input directive in the header, although this isn't required.
+
+[source,ruby]
+---------------------------------------------------------------------
+%var inboundProperties[’userName’]
+---------------------------------------------------------------------
+
+=== Outbound Properties from a Mule Message
+
+You can take any *Outbound Properties* in the mule message that arrives to the DataWeave transformer and use it in your transform body. To refer to it, simply call it through the matching http://www.mulesoft.org/documentation/display/current/Mule+Expression+Language+MEL[MEL] expression.
+
+In MEL, there are two supported syntaxes to call an outbound property:
+
+* `outboundProperties.name`
+* `outboundProperties[’name’]`
+
+[IMPORTANT]
+The first method only works if the variable name doesn't include any periods or spaces.
+
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+{
+  a: outboundProperties.userName
+}
+---------------------------------------------------------------------
+
+[TIP]
+If the metadata about these outbound properties is known to Studio, an autocomplete function will help you out.
+
+You can optionally also define the outbound property as a variable input directive in the header, although this isn't required.
+
+[source,ruby]
+---------------------------------------------------------------------
+%var outboundProperties[’userName’]
+---------------------------------------------------------------------
+
+
+=== Flow Variables from a Mule Message
+
+You can take any *Flow Variable* in the mule message that arrives to the DataWeave transformer and use it in your transform body. To refer to it, simply call it through the matching http://www.mulesoft.org/documentation/display/current/Mule+Expression+Language+MEL[MEL] expression.
+
+In MEL, there are two supported syntaxes to call a flow variable:
+
+* `flowVars.name`
+* `flowVars[’name’]`
+
+[IMPORTANT]
+The first method only works if the variable name doesn't include any periods or spaces.
+
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+{
+  a: flowVars.userName
+}
+---------------------------------------------------------------------
+
+[TIP]
+If the metadata about these flow variables is known to Studio, an autocomplete function will help you out.
+
+You can optionally also define the flow variable as a variable input directive in the header, although this isn't required.
+
+[source,ruby]
+---------------------------------------------------------------------
+%var flowVars[’userName’]
+---------------------------------------------------------------------

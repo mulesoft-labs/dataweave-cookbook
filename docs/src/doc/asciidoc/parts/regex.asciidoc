@@ -1,0 +1,6 @@
+= Regular Expressions
+
+*Type* => ':regex'
+
+Regular Expressions are defined between /. For example /(\d+)/ for represents multiple numerical digits from 0-9.
+These may be used as arguments in certain operations that act upon strings, like Matches or Replace, or on operations that act upon objects and arrays, such as filters.

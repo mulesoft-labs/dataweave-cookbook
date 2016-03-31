@@ -1,0 +1,584 @@
+
+[IMPORTANT] You're viewing documentation written using our new documentation platform. The following content is official MuleSoft documentation. If you have any feedback, please contact documentation@mulesoft.com.
+
+= Introduction
+
+The DataWeave Language is a powerful template engine that allows you to transform data to and from any kind of format (XML, CSV, JSON, Pojos, Maps, etc).
+
+== Getting started:
+
+In order to show the power of DataWeave, here are a few examples to get started.
+
+=== Basic Example
+
+This example shows a simple mapping form JSON to XML
+
+.Input
+[source,json]
+----
+{
+  "title": "Java 8 in Action: Lambdas, Streams, and functional-style programming",
+  "author": "Mario Fusco",
+  "year": 2014
+}
+----
+
+.Transform
+[source,ruby]
+----
+%dw 1.0
+%input payload application/json
+%output application/xml
+---
+{
+  order: {
+    type: "Book",
+    title: payload.title,
+    details: "By $(payload.author) ($(payload.year))"
+  }
+}
+----
+
+.Output
+[source,xml]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<order>
+  <type>Book</type>
+  <title>Java 8 in Action: Lambdas, Streams, and functional-style programming</title>
+  <details>By Mario Fusco (2014)</details>
+</order>
+----
+=== String manipulation
+
+This example shows how easy it is to work with strings in DataWeave.
+
+.Input
+[source,xml]
+----
+<users>
+  <user>
+    <name>Mariano Achaval</name>
+    <phone>152235465654</phone>
+    <street>Laprida 924</street>
+  </user>
+  <user>
+    <name>Martin Alejandro Cousido</name>
+    <phone>15332255555</phone>
+    <street>Acassuso 2280</street>
+  </user>
+</users>
+----
+
+.Transform
+[source,ruby]
+----
+%dw 1.0
+%input payload application/xml
+%output application/json
+%function words(name) name splitBy " "
+---
+contacts: payload.users.*user map using (parts =  words($.name)){
+  firstName: parts[0],
+  (secondName: parts[1]) when (sizeOf parts) > 2,
+  lastName: parts[-1],
+  email: "$((lower $.name) replace " " with ".")@acme.com.ar",
+  address: $.street
+}
+----
+
+.Output
+[source,json]
+----
+{
+  "contacts": [
+    {
+      "firstName": "Mariano",
+      "lastName": "Achaval",
+      "email": "mariano.achaval@acme.com.ar",
+      "address": "Laprida 924"
+    },
+    {
+      "firstName": "Martin",
+      "secondName": "Alejandro",
+      "lastName": "Cousido",
+      "email": "martin.alejandro.cousido@acme.com.ar",
+      "address": "Acassuso 2280"
+    }
+  ]
+}
+----
+
+
+=== Grouping by
+
+This example shows how easy it is to group by a given criteria and then transform that result to match the expected output.
+
+.Input
+[source,json]
+----
+{
+  "items": [
+      {
+        "type" : "book",
+        "label" : "Java Curiosities",
+        "author" : "Luis Miguel",
+        "image": "http://www.gravatar.com/avatar/a133c7d8d9245d063b136732272ea77e",
+        "url": "http://javacuriosities.blogspot.com.ar/"
+      },
+      {
+        "type" : "CD",
+        "label" : "No culpes a la noche",
+        "author" : "Luis Miguel",
+        "image": "http://www.gravatar.com/avatar/a133c7d8d9245d063b136732272ea77e"
+      },
+      {
+        "type" : "book",
+        "label" : "Mule in Action",
+        "author" : "Victor Romero"
+      },
+      {
+        "type" : "CD",
+        "label" : "Yesterday",
+        "author" : "The Beatles"
+      }
+    ]
+}
+----
+.Transform
+[source,ruby]
+----
+%dw 1.0
+%input payload application/json
+%output application/json
+---
+patents : payload.items groupBy $.author pluck {
+  owner: $$,
+  categories: $.type
+}
+----
+
+.Output
+[source,json]
+----
+{
+  "patents": [
+    {
+      "owner": "Victor Romero",
+      "categories": [
+        "book"
+      ]
+    },
+    {
+      "owner": "The Beatles",
+      "categories": [
+        "CD"
+      ]
+    },
+    {
+      "owner": "Luis Miguel",
+      "categories": [
+        "book",
+        "CD"
+      ]
+    }
+  ]
+}
+----
+
+
+== Document Structure
+
+DataWeave files are divided into two main sections:
+
+. The Header, which defines directives (optional)
+. The Body, which describes the output structure
+
+Both sections are delimited by a separator, which is not required if no header is present. The separator consists of three dashes: "---"
+
+Below is a taste of what a .dwl file looks like. This code describes a conversion from a JSON input to an XML output:
+
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%input application/json
+%output application/xml
+---
+{
+  user: {
+    name: payload.user_name,
+    lastName: payload.user_lastName
+  }
+}
+---------------------------------------------------------------------
+Note that the two initial lines of code compose the header, the separator then delimits it from the rest of the file, the body, where the output structure is defined.
+This DataWeave example expects to receive a JSON input that is structured like the JSON example below:
+
+[source,json]
+---------------------------------------------------------------------
+ {
+  "user_name": "Annie",
+  "user_lastName": "Point"
+ }
+---------------------------------------------------------------------
+Upon receiving that as an input, DataWeave produces the XML output shown below:
+
+[source,xml]
+---------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<user>
+ <name>Annie</name>
+ <lastName>Point</lastName>
+</user>
+---------------------------------------------------------------------
+
+
+=== Header
+
+The DataWeave header contains the directives, these define high level information about your transformation. The structure of the Header is a sequence of lines, each with its own Directives. The Header is terminated with '---'.
+Through directives you can define:
+
+* DataWeave *version*
+* *Input* types and sources
+* *Output* type
+* *Namespaces* to import into your transform
+* *Constants* that can be referenced throughout the body
+* *Functions* that can be called throughout the body
+
+==== Directives
+
+All directives are declared on the header section of your DataWeave document and act upon the entire scope of it. Directives are a mechanism to declare variables and constants and namespace aliases which need to be referenced in the Document.
+They are also needed to declare the type of the output of your transform. In Anypoint Studio, you can optionally use them to declare additional inputs, you will rarely need them for this as any data arriving in the incoming Mule Message is already implicitly recognized as an input.
+
+===== Version Directive:
+
+Through this directive, you specify the version of the DataWeave syntax that is used to interpret the transformation.
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+---------------------------------------------------------------------
+
+===== Namespace Directive:
+
+This directive associates an alias with its subsequent URI. The directive is relevant only when either the input or the output is of type XML.
+[source,ruby]
+---------------------------------------------------------------------
+%namespace mes http://www.mulesoft.com/anypoint/SOA/message/v1.0
+---------------------------------------------------------------------
+
+===== Input Directive
+
+[WARNING]
+When using DataWeave in Anypoint Studio, it's not necessary to declare input directives for any of the components of the Mule Message that arrives to the DataWeave transformer (Payload, flow variables and input/outbound properties) nor for any system variables. These are already implicitly recognized as inputs and can be referenced anywhere in the DataWeave body without a need to include them in the header, their type is known from Mule metadata.
+
+Inputs are declared by assigning a name and a content type. You may define as many input directives as you want, you can then refer to them (or their child elements) in any part of the DataWeave body through the names defined in the directive.
+[source,ruby]
+---------------------------------------------------------------------
+%input payload application/xml
+---------------------------------------------------------------------
+
+Valid types are:
+
+* application/json
+* application/xml
+* application/java
+* application/csv
+* application/dw
+* text/json
+* text/xml
+* text/csv
+
+
+====== CSV Input Directive
+
+[WARNING]
+When using DataWeave in Anypoint Studio, it's not necessary to declare any input directives for any of the components of the Mule Message that arrives to the DataWeave transformer (Payload, flow variables and input/outbound properties) nor for any system variables. These are already implicitly recognized as inputs and can be referenced anywhere in the DataWeave body without a need to include them in the header, their type is known from Mule metadata.
+
+When defining an input of type CSV, there are a few optional parameters you can add to the input directive to customize how the data will be parsed.
+
+* `header`: boolean that defines if the first line in the data contains headers
+* `separator`: character that separates fields, `','` by default
+* `quote`: character that defines quoted text, `" "` by default
+* `escape`: character that escapes quotes, `/` by default
+
+A CSV input directive with custom parameters set looks like this:
+[source,ruby]
+----
+%input in0 application/csv header=true,separator=";"
+----
+
+
+[NOTE]
+====
+When `header=true` you can then access the fields within the input anywhere by name. Ex: `in0.userName`.
+
+When `header=false` you must access the fields by index, referencing first the entry and then the field, Ex: `in0[107][2]`
+====
+
+In Anypoint Studio, you can set the parameters of the CSV input through the graphical interface, by selecting the element from the tree view in the input section and then clicking the gear icon. See link:https://developer.mulesoft.com/docs/display/current/Using+DataWeave+in+Studio[DataWeave in Studio] for more details.
+
+===== Output Directive
+
+The Output Directive specifies what is the output type of the transformation, specified using content/type.
+Only one output can be specifed, the structure of this output is then to be defined in the DataWeave body.
+[source,ruby]
+---------------------------------------------------------------------
+%output application/xml
+---------------------------------------------------------------------
+Valid types are:
+
+* application/json
+* application/xml
+* application/java
+* application/csv
+* application/dw
+* text/json
+* text/xml
+* text/csv
+
+====== Skip on Null
+
+Whenever the output has null values in its elements or attributes, you can specify if this will generate an outbound message that contains fields with "null" values or if these fields will be ignored entirely. This can be set through an attribute in the output directive named *skipNullOn*, which can be set to three different values: *elements*, *attributes* or *everywhere*.
+
+[source,ruby]
+---------------------------------------------------------------------
+%output application/xml skipNullOn="everywhere"
+---------------------------------------------------------------------
+
+When set to *elements*, whenever there's a key:value pair that has a null value, it will be ignored.
+When set to *attributes*, whenever there's an XML attribute with a null value, it will be skipped.
+When set to *everywhere*, it will apply this rule to both elements and attributes.
+
+===== Define Constant Directive
+
+You can define a constant in the header, you can then reference it (or its child elements, if any exist) in the DataWeave body.
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%var conversionRate=13.15
+%output application/json
+---
+{
+ price_dollars: payload.price,
+ price_localCurrency: payload.price * conversionRate
+}
+---------------------------------------------------------------------
+
+===== Define Function Directive
+
+You can define a function in the header, you can then call it in any part of the DataWeave body, including arguments.
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%var toUser = (user) -> {name: user.name, lastName: user.lastName}
+%output application/json
+---
+{
+ user: toUser(payload)
+}
+---------------------------------------------------------------------
+
+=== Body
+
+The body contains the *expression* that generates the output structure. Regardless of the types of the input and output, the data model for the output is always described in the standard DataWeave language, and this model that the transform executes.
+The data model of the produced output can consist of three different types of data:
+
+. Objects: represented as collection of key value pairs
+. Arrays: represented as a sequence of comma separated values
+. Simple literals
+
+When you write your DataWeave file, you define an expression that generates one of the data types listed above.
+
+
+=== Simple Literal Types
+
+Literals can be of the following types:
+
+. String : Double quoted ("Hello") or Single quoted ('Hello')
+. Boolean : Literals true or false
+. Number : Decimal and Integer values are supported (ex: 2.0)
+. Dates : IS0-8601 enclosed by "|" (ex:|2003-10-01T23:57:59Z|)
+. Regex : Regex expression enclosed by "/" (ex:/(\d+)-(\d+)/)
+
+[source,ruby]
+---------------------------------------------------------------------
+This is a String literal expression
+---------------------------------------------------------------------
+
+=== Arrays:
+
+Arrays are sequences of *expressions*.
+
+[source,ruby]
+--------------------------------------------------------------------
+[ 1, 2 + 2, 3 * 3, $x ]
+--------------------------------------------------------------------
+
+=== Objects:
+
+These are represented as a comma separated sequence of key : value pairs surrounded by curly braces { }.
+
+.Tramsform
+[source,ruby]
+---------------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+myoutput:{
+  name : "Jill",
+  payload : payload.id + 3
+  }
+---------------------------------------------------------------------
+
+.Output
+[source,xml]
+---------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<myoutput>
+  <name>Jill</name>
+  <payload>5</payload>
+</myoutput>
+---------------------------------------------------------------------
+
+Note that both the keys and the values may be *expressions*.
+
+== Example Transformation
+
+Suppose you want to transform an XML document to JSON, appending extra content to the output.
+
+.Input as XML
+[source, xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<note>
+  <to>Tove</to>
+  <from>Jani</from>
+  <heading>Reminder</heading>
+  <body>Don't forget me this weekend!</body>
+</note>
+----
+
+.Transform
+[source,ruby]
+----
+%dw 1.0
+%input payload application/xml
+%output application/json
+%var date='01-MAR-2015'
+---
+{
+  letter : payload,
+  sent : date
+}
+----
+
+.Output as JSON
+[source, json]
+----
+{
+  "letter": {
+    "note": {
+      "to": "Tove",
+      "from": "Jani",
+      "heading": "Reminder",
+      "body": "Don't forget me this weekend!"
+    }
+  },
+  "sent": "01-MAR-2015"
+}
+----
+
+[WARNING]
+Whenever you make a transformation from JSON to XML, make sure that the resulting output is valid as an XML file. Specifically, make sure that there's a single parent tag, JSON supports having multiple elements at the highest level whilst XML doesn't.
+Likewise, whenever you transform from XML to JSON, make sure the resulting output is valid as a JSON file. Specifically, make sure that there are no repeated keys inside the same parent, XML supports having this but JSON doesn't.
+
+== DataWeave Canonical Model
+
+As covered above, DataWeave uses three basic data types: Objects, Arrays and Simple Types, the execution of a DataWeave transformation always produces one of these three types of data. In essence, the body of every DataWeave transformation is a single Expression that defines the structure and contents of one such object. This expression can be built using any of the following elements:
+
+* Objects
+* Arrays
+* Simple literals
+* Variable and Constant references
+
+A DataWeave transformation can be as simple as the definition of a single element from the list above. Even a simple literal 'Hello world' is a valid DataWeave transformation.
+
+Expressions can also be complex, meaning that they can be composed out of other expressions. This can be achieved by either nesting expressions inside Arrays or Objects, or through the use of operators.
+In complex expressions, the result of one expression sets the context for the subsequent execution of other expressions. You just need to remember that each expression produces an Object, an Array or a Simple literal.
+
+If you declare input directives on your DataWeave's header, regardless of their type (XML, JSON, Java),
+any execution that references these inputs will produce, as stated before, an Object, an Array or a Simple literal. When you understand the structure of these data types, expressed in the syntax of DataWeave expressions, you effectively understand DataWeave.
+
+In Anypoint Studio, if you ever need to visualise the canonical DataWeave model of your data to get a better reference, set the output type of your transform to application/dw. Your transform will then output the your data as a DataWeave expression, which resembles a JSON object. See the example below:
+
+=== Example Transformation to DataWeave
+
+.Input
+[source, xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<note>
+  <to>Tove</to>
+  <from>Jani</from>
+  <heading>Reminder</heading>
+  <body>Don't forget me this weekend!</body>
+</note>
+----
+
+.Transform
+[source,ruby]
+----
+%dw 1.0
+%output application/dw
+---
+payload
+----
+
+.Output
+[source,ruby]
+----
+{ # <1>
+  note: { # <2>
+    to: "Tove",
+    from: "Jani",
+    heading: "Reminder", # <3>
+    body: "Dont forget me this weekend!"
+  }
+}
+----
+<1> The input is parsed into an Object.
+<2> As previously stated, Objects are sequences of key:value pairs. Note how each element name from the xml input is parsed into a key followed by a colon : and then the value.
+<3> The value may be a Simple literal, as is the case of the *heading* field, or an object, as is the case in *note* #2.
+
+== Literal Expressions
+
+These correspond to the three different data-types: Simple, Object and Array
+
+*Simple Literal*
+[source,ruby]
+----
+%dw 1.0
+%output application/json
+---
+123
+----
+
+*Object Literal*
+[source,ruby]
+----
+%dw 1.0
+%output application/json
+---
+{
+  message: "Hello"
+}
+----
+
+*Array Literal*
+[source,ruby]
+----
+%dw 1.0
+%output application/json
+---
+[ "My", "three", "words" ]
+----

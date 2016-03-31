@@ -1,0 +1,40 @@
+= Weave Documentation
+:author: MuleSoft Inc.
+:toc: left
+:icons: font
+:numbered:
+:website: http://mulesoft.org/
+
+
+:leveloffset: 1
+include::introduction.adoc[]
+
+include::parts/variables.asciidoc[]
+
+include::parts/selectors.asciidoc[]
+
+include::parts/operations.asciidoc[]
+
+include::parts/object.asciidoc[]
+
+include::parts/array.asciidoc[]
+
+include::parts/string.asciidoc[]
+
+include::parts/number.asciidoc[]
+
+include::parts/boolean.asciidoc[]
+
+include::parts/dates.asciidoc[]
+
+include::parts/regex.asciidoc[]
+
+include::parts/customtypes.asciidoc[]
+
+include::parts/metadata.asciidoc[]
+
+include::parts/lambdas.asciidoc[]
+
+include::examples.asciidoc[]
+
+:leveloffset: 0

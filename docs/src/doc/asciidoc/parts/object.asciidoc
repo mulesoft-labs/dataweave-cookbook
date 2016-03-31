@@ -1,0 +1,95 @@
+= Object
+
+*Type* => ':object'
+
+Objects are represented as a collection of key:value pairs.
+
+. Object: { 'Key' : Value }
+. Key : 'Qualified Name' @('Qualified Name'= Value,...)
+. Qualified Name: 'namespace prefix#name' where the 'namespace prefix#' part is optional
+. Name: String that represents the name.
+
+[TIP]
+Strings must be double quoted to be recognized as strings.
+
+
+== Special Types of Objects
+
+=== Single Value Objects
+
+If an Object has only one key:value pair, the enclosing curly brackets { } are not required:
+
+.Example
+
+[source,ruby]
+---------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+name: "Annie"
+---------------------------------------------------------
+
+=== Conditional Elements
+
+Objects can define conditional key:value pairs based on a conditional expression.
+
+[source,ruby]
+---------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+file: {
+  name: "transform",
+  (extension: "zip") when payload.fileSystem?
+}
+---------------------------------------------------------
+
+This example outputs an additional field called "extension" only when the fileSystem property is present in payload (this field may contain any value, not just "true").
+
+[source,xml]
+--------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<file>
+  <name>transform</name>
+  <extension>zip</extension>
+</file>
+--------------------------------------------------------
+
+If absent
+
+[source,xml]
+--------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<file>
+  <name>transform</name>
+</file>
+--------------------------------------------------------
+
+=== Dynamic elements
+Dynamic elements allow you to add the result of an expression as key-value pairs of an object.
+
+link:anypoint  http://www.mulesoft.org/documentation/display/current/Creating+an+Anypoint+Connector+Project[Creating an Anypoint Connector Project]
+
+Transform
+[source,ruby]
+--------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  a: "a",
+  (["b","c","d"] map {'$': $})
+}
+--------------------------------------------------------
+
+Output
+[source,json]
+--------------------------------------------------------
+{
+  "a": "a",
+  "b": "b",
+  "c": "c",
+  "d": "d"
+}
+
+--------------------------------------------------------

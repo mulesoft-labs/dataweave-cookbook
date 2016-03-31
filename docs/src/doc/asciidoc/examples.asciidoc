@@ -1,0 +1,11 @@
+= Examples
+:leveloffset: 2
+include::../../../../core/src/test/resources/com/mulesoft/weave/examples/xml_basic/example.asciidoc[]
+include::../../../../core/src/test/resources/com/mulesoft/weave/examples/json_to_xml/example.asciidoc[]
+include::../../../../core/src/test/resources/com/mulesoft/weave/examples/xml_to_json/example.asciidoc[]
+include::../../../../core/src/test/resources/com/mulesoft/weave/examples/xml_to_json_2/example.asciidoc[]
+include::../../../../core/src/test/resources/com/mulesoft/weave/examples/xml_group_by/example.asciidoc[]
+include::../../../../core/src/test/resources/com/mulesoft/weave/examples/xml_removal/example.asciidoc[]
+include::../../../../core/src/test/resources/com/mulesoft/weave/examples/xml_replacement/example.asciidoc[]
+
+:leveloffset: 1

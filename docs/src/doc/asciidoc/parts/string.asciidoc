@@ -1,0 +1,66 @@
+= String
+
+*Type* => ':string'
+
+A string can be defined by the use of double quotes or single quotes.
+[source, ruby]
+--------------------------------------------------------
+{
+  doubleQuoted: "Hello",
+  singleQuoted: 'Hello',
+}
+--------------------------------------------------------
+
+== String interpolation
+
+String interpolation allows you to embed variables or expressions directly in a string.
+
+.Transform
+[source, ruby]
+--------------------------------------------------------
+%dw 1.0
+%output application/json
+%var name = "Shoki"
+---
+{
+    Greeting: "Hi, my name is $name",
+    Sum: "1 + 1 = $(1 + 1)"
+}
+--------------------------------------------------------
+
+.Output
+[source,json]
+--------------------------------------------------------
+{
+  "Greeting": "Hi, my name is Shoki",
+  "Sum": "1 + 1 = 2"
+}
+--------------------------------------------------------
+
+== Selectors
+
+=== Index selector
+
+Selects the character at a given position using "[]".
+
+. If the index is bigger or equals to 0, it will start counting from the beginning.
+. If the index is negative, it will start counting from the end.
+
+.Transform
+[source, ruby]
+--------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  name: "Emiliano"[0]
+}
+--------------------------------------------------------
+
+.Output
+[source,json]
+--------------------------------------------------------
+{
+  "name": "E"
+}
+--------------------------------------------------------

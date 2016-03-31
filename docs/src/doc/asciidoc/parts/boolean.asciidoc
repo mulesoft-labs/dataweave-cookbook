@@ -1,0 +1,5 @@
+= Boolean
+
+*Type* => ':boolean'
+
+A boolean is defined by the keywords 'true' and 'false'

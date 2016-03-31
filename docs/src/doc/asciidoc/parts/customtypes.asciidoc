@@ -1,0 +1,172 @@
+= Custom Types
+
+You can define your own custom types in the header of your transform, then in the body you can define an element as being of that type.
+
+To do so, the directive must be structured as following `%type name = java definition`
+
+For example:
+
+[source,ruby]
+----
+%dw 1.0
+%type currency = :number { format: "##"}
+%type user = :object { class: “my.company.User”}
+----
+
+[TIP]
+====
+Usually it's a good idea to extend an existing type rather than creating one from scratch.
+
+For example, above `:string` defines `currency` as extending the string type.
+====
+
+To then assign an element as being of the custom type you defined, use the operation `as :type` after defining a field:
+
+[source,ruby]
+----
+%dw 1.0
+%type currency = :number { format: "##"}
+%type user = :object { class: “my.company.User”}
+---
+customer:payload.user as :user
+----
+
+== Defining Types as a Hint for Developers
+
+In Anypoint Studio, it's easy to view metadata that describes the input and output data of every building block you're using. When defining a custom type for a particular input or output of your transform, this is represented in the DataWeave transformer's metadata.
+Exposing metadata helps developers understand what it is they're integrating to in order to build up the rest of a system, as it lets them know what they need to provide and what they can expect in advance.
+
+=== Java
+
+==== Class
+
+Java developers use the 'class' metadata key as hint for what class needs to be created and sent in.
+If this is not explicitly defined, DataWeave will try to infer from the context or it will assign it the default values:
+
+
+ * java.util.HashMap for *objects*
+ * java.util.ArrayList for *lists*
+
+.Transform
+[source, ruby]
+-----------------------------------------------------------------------
+%dw 1.0
+%type user = :object { class: "com.anypoint.df.pojo.User"}
+%output application/xml
+---
+{
+  name : "Mariano",
+  age : 31
+} as :user
+
+-----------------------------------------------------------------------
+
+The above code defines your type as an instance of 'com.anypoint.df.pojo.User'.
+
+=== Xml
+
+==== CDATA
+
+Xml specifies a new type called *:cdata* that inherits from *:string*. Using this type will output a CDATA structure.
+
+.Transform
+[source, ruby]
+----------------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+{
+  users:
+  {
+    user : "Mariano" as :cdata,
+    age : 31 as :cdata
+  }
+}
+----------------------------------------------------------------------
+
+.Output
+[source,xml]
+----------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<users>
+  <user><![CDATA[Mariano]]></user>
+  <age><![CDATA[31]]></age>
+</users>
+----------------------------------------------------------------------
+
+
+== Defining Types For Type Coercion
+
+
+=== Format
+
+
+The metadata 'format' key is used for formatting numbers and dates
+
+.Input
+[source,xml]
+-----------------------------------------------------------------------
+<items>
+    <item>
+        <price>22.30</price>
+    </item>
+    <item>
+        <price>20.31</price>
+    </item>
+</items>
+-----------------------------------------------------------------------
+
+.Transform
+[source, ruby]
+-----------------------------------------------------------------------
+%dw 1.0
+%output application/json
+%type currency = :number { format: "##"}
+---
+books: payload.items.*item map
+    book:
+        price: $.price as :currency
+-----------------------------------------------------------------------
+
+.Output
+[source,json]
+-----------------------------------------------------------------------
+{
+  "books": {
+    "book": {
+      "price": 22
+    },
+    "book": {
+      "price": 20
+    }
+  }
+}
+-----------------------------------------------------------------------
+
+=== Separator
+
+
+The metadata 'separator' key is used for splitting and joining arrays into strings and viceversa.
+
+
+.Transform
+[source, ruby]
+-----------------------------------------------------------------------
+%dw 1.0
+%output application/json
+%type myList = :array {separator: ","}
+---
+books: "name,last name,address" as :array
+-----------------------------------------------------------------------
+
+.Output
+[source,json]
+-----------------------------------------------------------------------
+{
+  "books": [
+    "name",
+    "last name",
+    "address"
+  ]
+}
+-----------------------------------------------------------------------

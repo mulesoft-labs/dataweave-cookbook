@@ -1,0 +1,28 @@
+<fop version="1.0">
+<!-- 
+        By default, docbook xsl selects Symbol,ZapfDingbats as extra font families, but they lack
+        bold variants causing (harmless) warnings about downgrading. Avoid that by downgrading here.
+-->
+
+
+    <!-- Strict user configuration -->
+    <strict-configuration>true</strict-configuration>
+
+    <!-- Strict FO validation -->
+    <strict-validation>false</strict-validation>
+
+	<fonts>
+       <substitutions>
+           <substitution>
+                 <from font-family="Symbol" font-style="normal" font-weight="700..900"/>
+                  <to font-family="Symbol" font-style="normal" font-weight="400"/>
+            </substitution>
+            <substitution>
+                 <from font-family="ZapfDingbats" font-style="normal" font-weight="700..900"/>
+                 <to font-family="ZapfDingbats" font-style="normal" font-weight="400"/>
+            </substitution>
+    	</substitutions>
+ 	</fonts>
+
+ </fop>
+

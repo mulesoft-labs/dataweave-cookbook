@@ -1,0 +1,255 @@
+= Dates
+
+Dates in DataWeave follow the link:https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html[ISO-8601 standard] and are defined between '|' characters.
+The date system supports:
+
+* DateTime
+* Local DateTime
+* Time
+* Local Time
+* Period
+* TimeZone
+* Date
+
+
+== Date
+
+*Type* => ':date'
+
+Represented as 'Year'-'Month'-'Date'
+
+The type *Date* has no time component at all (not even midnight).
+
+
+.Transform
+
+[source, ruby]
+-----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+c: |2003-10-01|
+-----------------------------------------------------------------
+
+.Output
+
+[source,json]
+-----------------------------------------------------------------
+{
+  "c": "2003-10-01"
+}
+-----------------------------------------------------------------
+
+
+== Time
+
+*Type* => ':time'
+
+Represented as 'Hour':'Minutes':'Seconds'.'Milliseconds'
+
+.Transform
+
+[source, ruby]
+-----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+c: |23:59:56|
+-----------------------------------------------------------------
+
+.Output
+
+[source,json]
+-----------------------------------------------------------------
+{
+  "c": "23:59:56"
+}
+-----------------------------------------------------------------
+
+== TimeZone
+
+*Type* => ':timeZone'
+
+Timezones must include a + or a - to be defined as such. |03:00| is a time, |+03:00| is a timezone.
+
+
+.Transform
+
+[source, ruby]
+-----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+c: |-08:00|
+-----------------------------------------------------------------
+
+.Output
+
+[source,json]
+-----------------------------------------------------------------
+{
+  "c": "-08:00"
+}
+-----------------------------------------------------------------
+
+== DateTime
+
+*Type* => ':datetime'
+
+Date time is the conjunction of 'Date' + 'Time' + 'TimeZone'.
+
+.Transform
+
+[source, ruby]
+-----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+a: |2003-10-01T23:57:59-03:00|
+-----------------------------------------------------------------
+
+.Output
+
+[source,json]
+-----------------------------------------------------------------
+{
+  "a": "2003-10-01T23:57:59-03:00"
+}
+-----------------------------------------------------------------
+
+== Local Date Time
+
+*Type* => ':localdatetime'
+
+Date time is the conjunction of 'Date' + 'Time'. Local timezone to use.
+
+.Transform
+[source, ruby]
+-----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+a: |2003-10-01T23:57:59|
+-----------------------------------------------------------------
+
+.Output
+[source,json]
+-----------------------------------------------------------------
+{
+  "a": "2003-10-01T23:57:59"
+}
+-----------------------------------------------------------------
+
+== Period
+
+*Type* => ':period'
+
+Specifies a period of time. Examples |PT9M| => 9 minutes , |P1Y| => 1 Year
+
+.Transform
+[source, ruby]
+----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+a: |23:59:56| + |PT9M|
+----------------------------------------------------------------
+
+.Output
+[source,json]
+----------------------------------------------------------------
+{
+  "a": "00:08:56"
+}
+----------------------------------------------------------------
+
+
+== Accessors
+
+In order to access the different parts of the date, special selectors must be used
+
+.Transform
+[source, ruby]
+-----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  day: |2003-10-01T23:57:59Z|.day,
+  month: |2003-10-01T23:57:59Z|.month,
+  year: |2003-10-01T23:57:59Z|.year,
+  hour: |2003-10-01T23:57:59Z|.hour,
+  minutes: |2003-10-01T23:57:59Z|.minutes,
+  seconds: |2003-10-01T23:57:59Z|.seconds,
+  offsetSeconds: |2003-10-01T23:57:59-03:00|.offsetSeconds,
+  nanoseconds: |23:57:59.700|.nanoseconds,
+  milliseconds: |23:57:59.700|.milliseconds,
+  dayOfWeek: |2003-10-01T23:57:59Z|.dayOfWeek,
+  dayOfYear: |2003-10-01T23:57:59Z|.dayOfYear
+}
+-----------------------------------------------------------------
+
+.Output
+[source,json]
+-----------------------------------------------------------------
+{
+  "day": 1,
+  "month": 10,
+  "year": 2003,
+  "hour": 23,
+  "minutes": 57,
+  "seconds": 59,
+  "offsetSeconds": -10800,
+  "nanoseconds": 700000000,
+  "milliseconds": 700,
+  "dayOfWeek": 3,
+  "dayOfYear": 274
+}
+-----------------------------------------------------------------
+
+== Changing the Format of a Date
+
+You can specify a date to be in any format you prefer through using *as* in the following way:
+
+.Transform
+[source, ruby]
+----------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+formatedDate: |2003-10-01T23:57:59| as :string {format: "YYYY-MM-dd"}
+----------------------------------------------------------------
+
+
+.Output
+[source,json]
+-----------------------------------------------------------------
+{
+  "formatedDate": "2003-10-01"
+}
+-----------------------------------------------------------------
+
+If you'll be doing multiple similar conversions in your transform, you might want to define a custom type as a directive in the header and set each date as being of that type.
+
+.Transform
+[source, ruby]
+----------------------------------------------------------------
+%dw 1.0
+%output application/json
+%type mydate = :string { format: "YYYY/MM/dd" }
+---
+{
+  formatedDate1: |2003-10-01T23:57:59| as :mydate,
+  formatedDate2: |2015-07-06T08:53:15| as :mydate
+}
+----------------------------------------------------------------
+
+
+.Output
+[source,json]
+-----------------------------------------------------------------
+{
+  "formatedDate1": "2003/10/01",
+  "formatedDate2": "2015/07/06"
+}
+-----------------------------------------------------------------

@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+
+    <groupId>com.mulesoft.weave</groupId>
+    <artifactId>weave-recepies</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <organization>
+        <name>MuleSoft, Inc.</name>
+        <url>http://www.mulesoft.com</url>
+    </organization>
+
+    <name>DFL :: Doc</name>
+    <packaging>pom</packaging>
+
+    <prerequisites>
+        <maven>3.0.0</maven>
+    </prerequisites>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <asciidoctor.version>1.5.0</asciidoctor.version>
+        <docbkx.version>2.0.14</docbkx.version>
+        <UMLet.version>1.1.6</UMLet.version>
+        <isDraft>yes</isDraft>
+        <github.global.server>github</github.global.server>
+        <s3.bucket>dataweave-docs</s3.bucket>
+    </properties>
+
+    <build>
+
+        <resources>
+            <resource>
+                <directory>${basedir}/src/doc/resources</directory>
+                <includes>
+                    <include>fonts/*</include>
+                </includes>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>de.saumya.mojo</groupId>
+                <artifactId>gem-maven-plugin</artifactId>
+                <version>1.0.5</version>
+                <configuration>
+                    <!-- align JRuby version with AsciidoctorJ to avoid redundant downloading -->
+                    <jrubyVersion>1.7.9</jrubyVersion>
+                    <gemHome>${project.build.directory}/gems</gemHome>
+                    <gemPath>${project.build.directory}/gems</gemPath>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>initialize</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.asciidoctor</groupId>
+                <artifactId>asciidoctor-maven-plugin</artifactId>
+                <version>${asciidoctor.version}</version>
+
+                <configuration>
+                    <sourceDocumentName>index.asciidoc</sourceDocumentName>
+                    <sourceDirectory>${basedir}/src/doc/asciidoc</sourceDirectory>
+                    <gemPath>${project.build.directory}/gems-provided</gemPath>
+                    <requires>
+                        <require>asciidoctor-diagram</require>
+                    </requires>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <id>output-html</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>process-asciidoc</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <sourceHighlighter>coderay</sourceHighlighter>
+                            <backend>html5</backend>
+                            <attributes>
+                                <toc2/>
+                                <!--<stylesheet>../resources/mule.css</stylesheet>-->
+                                <imagesdir>./images</imagesdir>
+                            </attributes>
+                        </configuration>
+                    </execution>
+                    <!--<execution>
+                        <id>output-docbook</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>process-asciidoc</goal>
+                        </goals>
+                        <configuration>
+                            <doctype>book</doctype>
+                            <backend>docbook5</backend>
+                            <outputDirectory>${project.build.directory}/docbook</outputDirectory>
+                        </configuration>
+                    </execution>-->
+                </executions>
+            </plugin>
+
+            <plugin>
+                <inherited>false</inherited>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>remote-deploy</id>
+                        <phase>install</phase>
+                        <configuration>
+                            <tasks>
+                                <taskdef resource="org/mule/ant/tasks.properties"
+                                         classpathref="maven.plugin.classpath"/>
+                                <s3delete endpoint="s3.amazonaws.com" key="${aws.key}" secret="${aws.secret}"
+                                          bucket="${s3.bucket}">
+                                    <element name="fonts"/>
+                                    <element name="images"/>
+                                    <element name="gems-provided"/>
+                                    <element name="index.html"/>
+                                </s3delete>
+                                <s3upload endpoint="s3.amazonaws.com" key="${aws.key}" secret="${aws.secret}"
+                                          bucket="${s3.bucket}" publicRead="false" contentType="application/x-whatever">
+                                    <!-- fileset structure -->
+                                    <fileset dir="${basedir}/target/">
+                                        <exclude name="gems"/>
+                                    </fileset>
+                                </s3upload>
+
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.mule</groupId>
+                        <artifactId>s3-ant-tasks</artifactId>
+                        <version>0.2-SNAPSHOT</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant</artifactId>
+                        <version>1.7.1</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant-jsch</artifactId>
+                        <version>1.7.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+            <plugin>
+                <groupId>com.agilejava.docbkx</groupId>
+                <artifactId>docbkx-maven-plugin</artifactId>
+                <version>${docbkx.version}</version>
+
+                <dependencies>
+                    <!-- Docbook definition -->
+                    <dependency>
+                        <groupId>net.sf.docbook</groupId>
+                        <artifactId>docbook-xml</artifactId>
+                        <version>5.0-all</version>
+                        <classifier>resources</classifier>
+                        <type>zip</type>
+                        <scope>runtime</scope>
+                    </dependency>
+
+                    <!-- XSLT syntax highlighting -->
+                    <dependency>
+                        <groupId>net.sf.xslthl</groupId>
+                        <artifactId>xslthl</artifactId>
+                        <version>2.0.1</version>
+                        <scope>runtime</scope>
+                    </dependency>
+
+                    <!-- FOP hyphenation module -->
+                    <dependency>
+                        <groupId>net.sf.offo</groupId>
+                        <artifactId>fop-hyph</artifactId>
+                        <version>1.2</version>
+                        <scope>runtime</scope>
+                    </dependency>
+
+
+                </dependencies>
+
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>generate-pdf</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <!-- docbkx configuration -->
+                <configuration>
+                    <!-- location of the docbook sources -->
+                    <sourceDirectory>${project.build.directory}/docbook</sourceDirectory>
+                    <includes>*.xml</includes>
+                    <imgSrcPath>${basedir}/src/doc/asciidoc/images</imgSrcPath>
+
+                    <!-- output directory -->
+                    <targetDirectory>${project.build.directory}/pdf</targetDirectory>
+
+                    <!-- Docbook/FOP customization -->
+                    <foCustomization>${basedir}/src/doc/docbkx/fo-stylesheets/docbook.xsl</foCustomization>
+                    <externalFOPConfiguration>${basedir}/src/doc/docbkx/fop-config/fop.xconf</externalFOPConfiguration>
+
+                    <!-- "Draft" processing control -->
+                    <draftMode>${isDraft}</draftMode>
+                    <draftWatermarkImage>${basedir}/src/doc/docbkx/images/draft.jpg</draftWatermarkImage>
+
+                    <!-- Admonastation control -->
+                    <admonGraphics>true</admonGraphics>
+                    <admonTextlabel>false</admonTextlabel>
+
+                    <!-- other docbkx configuration -->
+                    <paperType>A4</paperType>
+                    <highlightSource>1</highlightSource>
+                    <ulinkShow>0</ulinkShow>
+
+                    <!-- FOP customization parameters -->
+                    <customizationParameters>
+                        <parameter>
+                            <name>header.image.filename</name>
+                            <value>${basedir}/src/doc/docbkx/images/AsciidoctorLogoSmall.jpeg</value>
+                        </parameter>
+                        <parameter>
+                            <name>admon.graphics.path</name>
+                            <value>${basedir}/src/doc/docbkx/images/</value>
+                        </parameter>
+                        <parameter>
+                            <name>admon.graphics.extension</name>
+                            <value>.jpg</value>
+                        </parameter>
+                    </customizationParameters>
+                </configuration>
+            </plugin>
+
+            <!--
+                Plugin to copy things around during the build process
+            -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+
+                    <!-- copy static images to the build image directory -->
+                    <execution>
+                        <id>copy-static-mages</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/images</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/doc/docbkx/images</directory>
+                                    <includes>
+                                        <include>*.*</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${basedir}/src/doc/resources/images</directory>
+                                    <includes>
+                                        <include>*.*</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+
+                    <!-- copy fonts to the fonts directory -->
+                    <execution>
+                        <id>copy-fonts</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/fonts</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/doc/resources/fonts</directory>
+                                    <includes>
+                                        <include>*.*</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.github</groupId>
+                <artifactId>site-maven-plugin</artifactId>
+                <version>0.11</version>
+                <configuration>
+                    <repositoryName>data-weave</repositoryName>
+                    <repositoryOwner>mulesoft</repositoryOwner>
+                    <outputDirectory>${project.build.directory}</outputDirectory>
+                    <excludes>
+                        <exclude>site/**/*</exclude>
+                    </excludes>
+                    <message>Creating site for ${project.version}</message>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>site</goal>
+                        </goals>
+                        <phase>site</phase>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.plexus</groupId>
+                        <artifactId>plexus-utils</artifactId>
+                        <version>1.5.15</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.plexus</groupId>
+                        <artifactId>plexus-utils</artifactId>
+                        <version>1.5.11</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>commons-lang</groupId>
+                        <artifactId>commons-lang</artifactId>
+                        <version>2.6</version>
+                    </dependency>
+
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>rubygems</groupId>
+            <artifactId>asciidoctor-diagram</artifactId>
+            <version>1.2.1</version>
+            <type>gem</type>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>rubygems</groupId>
+                    <artifactId>asciidoctor</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>rubygems-proxy-releases</id>
+            <name>RubyGems.org Proxy (Releases)</name>
+            <url>http://rubygems-proxy.torquebox.org/releases</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>mulesoft-snapshots</id>
+            <name>Mulesoft Snapshots</name>
+            <url>https://repository-master.mulesoft.org/nexus/content/repositories/ci-snapshots</url>
+        </repository>
+    </repositories>
+
+    <scm>
+        <connection>scm:git:git://github.com:mulesoft/data-weave.git</connection>
+        <developerConnection>scm:git:git@github.com:mulesoft/data-weave.git</developerConnection>
+        <url>http://github.com/mulesoft/data-weave</url>
+    </scm>
+
+</project>

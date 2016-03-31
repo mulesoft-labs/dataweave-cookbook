@@ -1,0 +1,54 @@
+= Adding xml elements based on a condition
+It is very common when mapping to Xml that we want to output a tag based on a condition.
+For example in this mapping we are going to insert the insurance tag only if it is present in the input
+.Input
+[source,json]
+---------------------------------------------------------
+[
+  {
+    "name" : "Julian",
+    "gender" : "Male",
+    "age" : 41,
+    "insurance": "Osde"
+  },
+  {
+    "name" : "Mariano",
+    "gender" : "Male",
+    "age" : 33
+  }
+]
+---------------------------------------------------------
+
+.Transform
+[source,ruby]
+---------------------------------------------------------
+%dw 1.0
+%input payload application/json
+%output application/xml
+---
+users: {
+  (
+    payload map {
+        user: {
+          (insurance: $.insurance) when $.insurance?,
+          name: $.name
+        }
+    }
+  )
+}
+---------------------------------------------------------
+
+.Output
+[source,xml]
+---------------------------------------------------------
+<?xml version='1.0' encoding='US-ASCII'?>
+<users>
+  <user>
+    <insurance>Osde</insurance>
+    <name>Julian</name>
+  </user>
+  <user>
+    <name>Mariano</name>
+  </user>
+</users>
+---------------------------------------------------------

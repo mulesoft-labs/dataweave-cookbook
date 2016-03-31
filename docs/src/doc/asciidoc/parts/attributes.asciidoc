@@ -1,0 +1,87 @@
+= Attributes
+
+A set of key value pairs associated to the key. Attributes are part of the key and are being declared inside the @() section.
+
+[source, ruby]
+----------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+user @(lastName:"Doe") : 'John'
+----------------------------------------------------------------
+
+[source,xml]
+----------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<user lastName="Doe">John</user>
+----------------------------------------------------------------
+
+== Conditional Attributes
+
+== Dynamic Attributes
+
+== Selectors
+
+=== Attribute selector
+
+The attribute selector returns the value of the attribute with the specified name.
+The expression looks like '<expression>.@<key name>'
+
+.Input
+
+[source,xml]
+----------------------------------------------------------------
+<user dni="30181626"/>
+----------------------------------------------------------------
+
+
+.Transform
+
+[source, ruby]
+----------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+a: payload.user.@dni
+----------------------------------------------------------------
+
+.Output
+
+[source,xml]
+----------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<a>30181626</a>
+----------------------------------------------------------------
+
+
+=== All Attribute selector
+
+The all attribute selectors returns an object with all the attribute key value pairs.
+The expression looks like '<expression>.@'
+
+.Input
+[source,xml]
+----------------------------------------------------------------
+<user dni="30181626" name="Peter" lastName="Parker"/>
+----------------------------------------------------------------
+
+.Transform
+[source, ruby]
+----------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+a: payload.user.@
+----------------------------------------------------------------
+
+.Output
+
+[source,xml]
+----------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<a>
+  <dni>30181626</dni>
+  <lastName>Parker</lastName>
+  <name>Peter</name>
+</a>
+----------------------------------------------------------------
